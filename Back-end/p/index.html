@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>题目录入系统</title>
+    <style>
+        .error { color: red; }
+        .success { color: green; }
+    </style>
+</head>
+<body>
+    {% if request.args.get('success') %}
+        <p class="success">题目提交成功！</p>
+    {% endif %}
+
+    {% if form.form_errors %}
+        {% for error in form.form_errors %}
+            <p class="error">{{ error }}</p>
+        {% endfor %}
+    {% endif %}
+
+    <form method="POST" action="/">
+        <!-- 题目名称 -->
+        <p>
+            题目：<input type="text" name="topic_name" value="{{ form.topic_name.data | default('', true) }}" required>
+            {% if form.topic_name.errors %}
+                <span class="error">{{ form.topic_name.errors[0] }}</span>
+            {% endif %}
+        </p>
+
+        <!-- 题目类型 -->
+        <p>
+            题目类型：
+            <input type="radio" name="topic_type" value="单选" {% if form.topic_type.data == '单选' %}checked{% endif %} required> 单选
+            <input type="radio" name="topic_type" value="多选" {% if form.topic_type.data == '多选' %}checked{% endif %}> 多选
+            {% if form.topic_type.errors %}
+                <span class="error">{{ form.topic_type.errors[0] }}</span>
+            {% endif %}
+        </p>
+
+        <!-- 选项 -->
+        <p>
+            A选项：<input type="text" name="Option_A" value="{{ form.Option_A.data | default('', true) }}" required>
+            {% if form.Option_A.errors %}
+                <span class="error">{{ form.Option_A.errors[0] }}</span>
+            {% endif %}
+        </p>
+        <p>
+            B选项：<input type="text" name="Option_B" value="{{ form.Option_B.data | default('', true) }}" required>
+            {% if form.Option_B.errors %}
+                <span class="error">{{ form.Option_B.errors[0] }}</span>
+            {% endif %}
+        </p>
+        <p>
+            C选项：<input type="text" name="Option_C" value="{{ form.Option_C.data | default('', true) }}" required>
+            {% if form.Option_C.errors %}
+                <span class="error">{{ form.Option_C.errors[0] }}</span>
+            {% endif %}
+        </p>
+        <p>
+            D选项：<input type="text" name="Option_D" value="{{ form.Option_D.data | default('', true) }}" required>
+            {% if form.Option_D.errors %}
+                <span class="error">{{ form.Option_D.errors[0] }}</span>
+            {% endif %}
+        </p>
+
+        <!-- 答案 -->
+        <p>
+            答案：<input type="text" name="answer" value="{{ form.answer.data | default('', true) }}" required>
+            {% if form.answer.errors %}
+                <span class="error">{{ form.answer.errors[0] }}</span>
+            {% endif %}
+        </p>
+
+        <!-- 详解 -->
+        <p>
+            详解：<input type="text" name="Explained" value="{{ form.Explained.data | default('', true) }}">
+            {% if form.Explained.errors %}
+                <span class="error">{{ form.Explained.errors[0] }}</span>
+            {% endif %}
+        </p>
+
+        <!-- 年份 -->
+        <p>
+            年份：<input type="number" name="topic_year" value="{{ form.topic_year.data | default('', true) }}" required>
+            {% if form.topic_year.errors %}
+                <span class="error">{{ form.topic_year.errors[0] }}</span>
+            {% endif %}
+        </p>
+
+        <!-- 月份 -->
+        <p>
+            月份：
+            <select name="topic_month" required>
+                <option value="5" {% if form.topic_month.data == 5 %}selected{% endif %}>5月</option>
+                <option value="11" {% if form.topic_month.data == 11 %}selected{% endif %}>11月</option>
+            </select>
+            {% if form.topic_month.errors %}
+                <span class="error">{{ form.topic_month.errors[0] }}</span>
+            {% endif %}
+        </p>
+
+        <button type="submit">提交</button>
+    </form>
+</body>
+</html>
