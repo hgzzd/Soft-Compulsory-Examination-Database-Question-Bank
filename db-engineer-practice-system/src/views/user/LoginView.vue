@@ -57,6 +57,9 @@ const loginError = ref('')
 
 // Login function
 const handleLogin = async () => {
+  // 清除之前的错误
+  loginError.value = '';
+  
   // Validate form
   await formRef.value.validate(async (valid: boolean) => {
     if (!valid) {
@@ -73,21 +76,44 @@ const handleLogin = async () => {
     
     // Process login
     isLoading.value = true
-    loginError.value = ''
     
     try {
+      console.log('开始登录请求，账号:', loginForm.username);
       const success = await userStore.login(loginForm.username, loginForm.password)
       
       if (success) {
+        console.log('登录成功，准备导航到练习页面');
         ElMessage.success('登录成功')
-        router.push('/exercise')
+        // 使用 await 等待导航完成
+        try {
+          await router.push('/exercise')
+        } catch (navError) {
+          console.error('导航错误:', navError);
+          // 如果导航失败，尝试刷新页面
+          window.location.href = '/exercise';
+        }
       } else {
+        console.error('登录失败:', userStore.error);
         loginError.value = userStore.error || '登录失败，请检查您的用户名和密码'
         refreshCaptcha()
+        loginForm.captcha = ''
       }
     } catch (error: any) {
-      loginError.value = error.message || '登录失败，请稍后再试'
+      console.error('登录异常:', error);
+      // 尝试显示更详细的错误信息
+      if (error.response) {
+        console.error('响应状态:', error.response.status);
+        console.error('响应数据:', error.response.data);
+        loginError.value = `登录失败 (${error.response.status}): ${error.response.data?.message || error.message}`;
+      } else if (error.request) {
+        console.error('未收到响应，请求详情:', error.request);
+        loginError.value = '服务器未响应，请检查网络连接或联系管理员';
+      } else {
+        loginError.value = error.message || '登录失败，请稍后再试';
+      }
+      
       refreshCaptcha()
+      loginForm.captcha = ''
     } finally {
       isLoading.value = false
     }

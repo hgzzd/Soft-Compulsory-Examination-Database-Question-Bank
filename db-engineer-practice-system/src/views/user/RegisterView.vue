@@ -97,6 +97,9 @@ const registerError = ref('')
 
 // Register function
 const handleRegister = async () => {
+  // 清除之前的错误信息
+  registerError.value = '';
+  
   // Validate form
   await formRef.value.validate(async (valid: boolean) => {
     if (!valid) {
@@ -113,7 +116,6 @@ const handleRegister = async () => {
     
     // Process registration
     isLoading.value = true
-    registerError.value = ''
     
     try {
       const success = await userStore.register(
@@ -124,14 +126,26 @@ const handleRegister = async () => {
       
       if (success) {
         ElMessage.success('注册成功，请登录')
-        router.push('/login')
+        // 清空表单，避免数据残留
+        registerForm.username = ''
+        registerForm.password = ''
+        registerForm.confirmPassword = ''
+        registerForm.email = ''
+        registerForm.captcha = ''
+        
+        // 导航到登录页
+        await router.push('/login')
       } else {
+        // 处理注册失败的情况
         registerError.value = userStore.error || '注册失败，请稍后再试'
         refreshCaptcha()
+        registerForm.captcha = ''
       }
     } catch (error: any) {
       registerError.value = error.message || '注册失败，请稍后再试'
+      console.error('注册过程中发生错误:', error)
       refreshCaptcha()
+      registerForm.captcha = ''
     } finally {
       isLoading.value = false
     }

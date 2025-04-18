@@ -11,7 +11,7 @@
  Target Server Version : 80039
  File Encoding         : 65001
 
- Date: 17/04/2025 16:55:11
+ Date: 18/04/2025 00:53:13
 */
 
 SET NAMES utf8mb4;
@@ -909,6 +909,31 @@ CREATE TABLE `users`  (
 
 -- ----------------------------
 -- Records of users
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for wrong_questions
+-- ----------------------------
+DROP TABLE IF EXISTS `wrong_questions`;
+CREATE TABLE `wrong_questions`  (
+  `id` int NOT NULL AUTO_INCREMENT COMMENT '错题ID',
+  `user_id` int NOT NULL COMMENT '用户ID',
+  `question_id` int NOT NULL COMMENT '题目ID',
+  `wrong_count` int NOT NULL DEFAULT 1 COMMENT '错误次数',
+  `last_wrong_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '最近一次错误时间',
+  `note` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '用户笔记',
+  `status` enum('new','reviewing','mastered') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'new' COMMENT '状态',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `idx_user_question`(`user_id` ASC, `question_id` ASC) USING BTREE,
+  INDEX `fk_wrong_question`(`question_id` ASC) USING BTREE,
+  CONSTRAINT `fk_wrong_question` FOREIGN KEY (`question_id`) REFERENCES `questions` (`question_id`) ON DELETE CASCADE ON UPDATE RESTRICT,
+  CONSTRAINT `fk_wrong_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户错题表' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of wrong_questions
 -- ----------------------------
 
 SET FOREIGN_KEY_CHECKS = 1;

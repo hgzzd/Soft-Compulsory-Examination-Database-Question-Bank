@@ -22,8 +22,29 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3000,
+    port: 5173,
     open: true,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        secure: false,
+        // 注释掉或删除rewrite规则，保留/api前缀
+        // rewrite: (path) => path.replace(/^\/api/, ''),
+        configure: (proxy, options) => {
+          proxy.on('error', (err, req, res) => {
+            console.log('代理错误:', err);
+          });
+          proxy.on('proxyReq', (proxyReq, req, res) => {
+            console.log('代理请求:', req.method, req.url, '->',
+              options.target + proxyReq.path);
+          });
+          proxy.on('proxyRes', (proxyRes, req, res) => {
+            console.log('代理响应:', proxyRes.statusCode, req.url);
+          });
+        },
+      }
+    }
   },
   build: {
     // Output dir for production build

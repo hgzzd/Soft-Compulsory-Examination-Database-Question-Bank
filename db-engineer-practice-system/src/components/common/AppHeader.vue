@@ -18,6 +18,8 @@ const isAuthenticated = computed(() => userStore.isAuthenticated)
 // Navigation items with icons
 const navItems = [
   { name: '题库练习', path: '/exercise', highlight: true },
+  { name: '学习资料', path: '/materials' },
+  { name: '错题本', path: '/wrong-questions' },
   { name: '历史记录', path: '/history' },
   { name: '数据分析', path: '/analytics' }
 ]
@@ -39,6 +41,10 @@ onMounted(() => {
   const currentPath = route.path
   if (currentPath.startsWith('/exercise')) {
     activeMenu.value = '/exercise'
+  } else if (currentPath.startsWith('/wrong-questions')) {
+    activeMenu.value = '/wrong-questions'
+  } else if (currentPath.startsWith('/materials')) {
+    activeMenu.value = '/materials'
   }
 })
 </script>
@@ -88,6 +94,8 @@ onMounted(() => {
           <template #dropdown>
             <ElDropdownMenu>
               <ElDropdownItem @click="navigateTo('/profile')">个人中心</ElDropdownItem>
+              <ElDropdownItem @click="navigateTo('/wrong-questions')">我的错题本</ElDropdownItem>
+              <ElDropdownItem @click="navigateTo('/favorite-materials')">我的收藏</ElDropdownItem>
               <ElDropdownItem divided @click="handleLogout">退出登录</ElDropdownItem>
             </ElDropdownMenu>
           </template>

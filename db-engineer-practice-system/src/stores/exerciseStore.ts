@@ -1,5 +1,8 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
+import questionService, { Question as APIQuestion, ExamSet } from '../services/questionService';
+import practiceService from '../services/practiceService';
+import mistakeService from '../services/mistakeService';
 
 export interface Chapter {
   id: string;
@@ -90,42 +93,20 @@ export const useExerciseStore = defineStore('exercise', () => {
     isLoading.value = true;
     
     try {
-      // TODO: API endpoint for chapters
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 600));
+      // 从API获取考试集作为章节
+      const response = await questionService.getExamSets();
       
-      // Mock chapter data
-      chapters.value = [
-        {
-          id: 'ch1',
-          name: '数据库系统概论',
-          children: [
-            { id: 'ch1-1', name: '数据库系统概述' },
-            { id: 'ch1-2', name: '数据模型' },
-            { id: 'ch1-3', name: '关系数据库标准语言SQL' }
-          ]
-        },
-        {
-          id: 'ch2',
-          name: '数据库设计',
-          children: [
-            { id: 'ch2-1', name: '数据库设计方法' },
-            { id: 'ch2-2', name: 'E-R模型及其应用' },
-            { id: 'ch2-3', name: '关系数据理论' }
-          ]
-        },
-        {
-          id: 'ch3',
-          name: '数据库系统实现技术',
-          children: [
-            { id: 'ch3-1', name: '数据存储' },
-            { id: 'ch3-2', name: '索引与查询优化' },
-            { id: 'ch3-3', name: '事务处理' }
-          ]
-        }
-      ];
+      // 将API返回的考试集数据转换为章节格式
+      const apiExamSets = response.data.items || [];
+      
+      chapters.value = apiExamSets.map((examSet: ExamSet) => ({
+        id: String(examSet.exam_set_id),
+        name: examSet.exam_name,
+        // 可以后续扩展子章节，如果API提供这样的数据结构
+        children: []
+      }));
     } catch (err: any) {
-      error.value = err.message || 'Failed to fetch chapters';
+      error.value = err.message || '获取章节失败';
     } finally {
       isLoading.value = false;
     }
@@ -135,37 +116,32 @@ export const useExerciseStore = defineStore('exercise', () => {
     isLoading.value = true;
     
     try {
-      // TODO: API endpoint for questions
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 800));
+      // 从API获取问题
+      const filters = chapterId ? { exam_set_id: Number(chapterId) } : {};
+      const response = await questionService.getQuestions(filters);
       
-      // Mock question data
-      const mockQuestions: Question[] = [];
+      // 将API返回的问题数据转换为前端使用的格式
+      const apiQuestions = response.data.items || [];
       
-      // Generate 20 mock questions
-      for (let i = 1; i <= 20; i++) {
-        mockQuestions.push({
-          id: `q${i}`,
-          title: `数据库示例问题 ${i}`,
-          content: `这是关于数据库系统的第 ${i} 个示例问题，这里可能包含较长的问题描述，还可能包含SQL代码或其他技术内容。`,
-          options: [
-            { key: 'A', content: '选项A的内容' },
-            { key: 'B', content: '选项B的内容' },
-            { key: 'C', content: '选项C的内容' },
-            { key: 'D', content: '选项D的内容' }
-          ],
-          answer: ['A', 'B', 'C', 'D'][Math.floor(Math.random() * 4)],
-          explanation: `这是问题 ${i} 的详细解答，包含了知识点和解题思路。`,
-          chapterId: chapterId || ['ch1-1', 'ch1-2', 'ch2-1', 'ch3-2'][Math.floor(Math.random() * 4)],
-          difficulty: ['easy', 'medium', 'hard'][Math.floor(Math.random() * 3)] as 'easy' | 'medium' | 'hard',
-          tags: ['SQL', '数据模型', '事务', '索引'][Math.floor(Math.random() * 4)].split(','),
+      questions.value = apiQuestions.map((q: APIQuestion) => {
+        return {
+          id: String(q.question_id),
+          title: `问题 ${q.question_number}`,
+          content: q.content, 
+          options: q.options ? q.options.map(opt => ({
+            key: opt.option_label,
+            content: opt.option_content
+          })) : [],
+          answer: q.correct_answer,
+          explanation: q.options?.find(o => o.option_label === q.correct_answer)?.option_content || '解析暂无',
+          chapterId: String(q.exam_set_id),
+          difficulty: 'medium' as 'easy' | 'medium' | 'hard', // 可以根据API的值映射
+          tags: [], // 可以根据需要从API数据中提取
           createdAt: new Date().toISOString()
-        });
-      }
-      
-      questions.value = mockQuestions;
+        };
+      });
     } catch (err: any) {
-      error.value = err.message || 'Failed to fetch questions';
+      error.value = err.message || '获取问题失败';
     } finally {
       isLoading.value = false;
     }
@@ -175,207 +151,257 @@ export const useExerciseStore = defineStore('exercise', () => {
     isLoading.value = true;
     
     try {
-      // TODO: API endpoint for exercise history
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 700));
+      // 从API获取练习历史
+      const response = await practiceService.getPracticeHistory();
+      const apiHistory = response.data.items || [];
       
-      // Mock history data
-      exerciseHistory.value = [
-        {
-          id: 'h1',
-          startedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-          completedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000 + 30 * 60 * 1000).toISOString(),
-          score: 80,
-          totalQuestions: 10,
-          correctAnswers: 8,
-          answers: [],
-          chapterId: 'ch1-1'
-        },
-        {
-          id: 'h2',
-          startedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-          completedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000 + 45 * 60 * 1000).toISOString(),
-          score: 70,
-          totalQuestions: 10,
-          correctAnswers: 7,
-          answers: [],
-          chapterId: 'ch2-1'
-        }
-      ];
+      // 将API返回的历史数据转换为前端使用的格式
+      exerciseHistory.value = apiHistory.map((h: any) => ({
+        id: String(h.history_id),
+        startedAt: h.start_time,
+        completedAt: h.end_time,
+        score: h.score,
+        totalQuestions: h.total_questions,
+        correctAnswers: h.correct_questions,
+        answers: [], // 可能需要额外的API调用来获取详细的答题记录
+        chapterId: h.category || null
+      }));
     } catch (err: any) {
-      error.value = err.message || 'Failed to fetch exercise history';
+      error.value = err.message || '获取练习历史失败';
     } finally {
       isLoading.value = false;
     }
   }
   
-  function startExercise(params: {
+  async function toggleFavorite(questionId: string) {
+    try {
+      if (favoriteQuestions.value.has(questionId)) {
+        // 取消收藏
+        await practiceService.unfavoriteQuestion(Number(questionId));
+        favoriteQuestions.value.delete(questionId);
+      } else {
+        // 添加收藏
+        await practiceService.favoriteQuestion(Number(questionId));
+        favoriteQuestions.value.add(questionId);
+      }
+    } catch (err: any) {
+      error.value = err.message || '更新收藏状态失败';
+    }
+  }
+  
+  async function fetchFavoriteQuestions() {
+    try {
+      const response = await practiceService.getFavoriteQuestions();
+      const favQuestions = response.data.items || [];
+      
+      // 更新收藏集合
+      favoriteQuestions.value = new Set(
+        favQuestions.map((q: any) => String(q.question_id))
+      );
+    } catch (err: any) {
+      error.value = err.message || '获取收藏题目失败';
+    }
+  }
+  
+  async function startExercise(params: {
     chapterId?: string;
     questionIds?: string[];
     timeLimit?: number;
   }) {
-    // Filter questions based on parameters
-    let selectedQuestions: Question[] = [];
-    
-    if (params.questionIds && params.questionIds.length > 0) {
-      selectedQuestions = questions.value.filter(q => params.questionIds?.includes(q.id));
-    } else if (params.chapterId) {
-      selectedQuestions = questions.value.filter(q => q.chapterId === params.chapterId);
-    } else {
-      // Random selection of 10 questions
-      const shuffled = [...questions.value].sort(() => 0.5 - Math.random());
-      selectedQuestions = shuffled.slice(0, 10);
+    try {
+      isLoading.value = true;
+      
+      let exerciseQuestions: Question[] = [];
+      
+      if (params.questionIds && params.questionIds.length > 0) {
+        // 如果提供了特定的问题ID列表
+        exerciseQuestions = params.questionIds
+          .map(id => questions.value.find(q => q.id === id))
+          .filter((q): q is Question => q !== undefined);
+      } else if (params.chapterId) {
+        // 基于章节开始练习
+        const count = 10; // 默认题目数量
+        const response = await questionService.getExamSetQuestions(Number(params.chapterId));
+        
+        // 转换API返回的问题
+        const apiQuestions = response.data || [];
+        exerciseQuestions = apiQuestions.map((q: APIQuestion) => ({
+          id: String(q.question_id),
+          title: `问题 ${q.question_number}`,
+          content: q.content,
+          options: q.options ? q.options.map(opt => ({
+            key: opt.option_label,
+            content: opt.option_content
+          })) : [],
+          answer: q.correct_answer,
+          explanation: q.options?.find(o => o.option_label === q.correct_answer)?.option_content || '解析暂无',
+          chapterId: String(q.exam_set_id),
+          difficulty: 'medium' as 'easy' | 'medium' | 'hard',
+          tags: [],
+          createdAt: new Date().toISOString()
+        }));
+      } else {
+        // 随机练习
+        const response = await questionService.getRandomQuestions();
+        const apiQuestions = response.data || [];
+        
+        exerciseQuestions = apiQuestions.map((q: APIQuestion) => ({
+          id: String(q.question_id),
+          title: `问题 ${q.question_number}`,
+          content: q.content,
+          options: q.options ? q.options.map(opt => ({
+            key: opt.option_label,
+            content: opt.option_content
+          })) : [],
+          answer: q.correct_answer,
+          explanation: q.options?.find(o => o.option_label === q.correct_answer)?.option_content || '解析暂无',
+          chapterId: String(q.exam_set_id),
+          difficulty: 'medium' as 'easy' | 'medium' | 'hard',
+          tags: [],
+          createdAt: new Date().toISOString()
+        }));
+      }
+      
+      // 创建新的练习会话
+      currentExercise.value = {
+        questions: exerciseQuestions,
+        answers: {},
+        startTime: new Date(),
+        timeLimit: params.timeLimit || null,
+        chapterId: params.chapterId || null
+      };
+      
+      // 在本地存储中保存当前练习状态
+      saveExerciseToCache();
+      
+      return true;
+    } catch (err: any) {
+      error.value = err.message || '开始练习失败';
+      return false;
+    } finally {
+      isLoading.value = false;
     }
-    
-    // Initialize current exercise
-    currentExercise.value = {
-      questions: selectedQuestions,
-      answers: {},
-      startTime: new Date(),
-      timeLimit: params.timeLimit || null,
-      chapterId: params.chapterId || null
-    };
-    
-    // Save to local storage for cache mechanism
-    saveExerciseToCache();
-    
-    return selectedQuestions.length;
   }
   
   function saveAnswer(questionId: string, answer: string) {
     if (!currentExercise.value) return false;
     
     currentExercise.value.answers[questionId] = answer;
-    
-    // Update cache
     saveExerciseToCache();
-    
     return true;
   }
   
-  function submitExercise() {
+  async function submitExercise() {
     if (!currentExercise.value) return null;
     
-    const { questions: exerciseQuestions, answers, startTime, chapterId } = currentExercise.value;
-    
-    // Calculate results
-    const userAnswers: UserAnswer[] = [];
-    let correctCount = 0;
-    
-    exerciseQuestions.forEach(question => {
-      const userAnswer = answers[question.id] || '';
-      const isCorrect = userAnswer === question.answer;
+    try {
+      isLoading.value = true;
       
-      if (isCorrect) correctCount++;
+      const { questions, answers, startTime, chapterId } = currentExercise.value;
+      let correctAnswers = 0;
       
-      userAnswers.push({
-        questionId: question.id,
-        answer: userAnswer,
-        isCorrect,
-        timeSpent: 0, // Would calculate from individual question timestamps in a real app
-        submittedAt: new Date().toISOString()
-      });
-    });
-    
-    const completedAt = new Date().toISOString();
-    const score = Math.round((correctCount / exerciseQuestions.length) * 100);
-    
-    // Create history entry
-    const historyEntry: ExerciseHistory = {
-      id: `h${Date.now()}`,
-      startedAt: startTime.toISOString(),
-      completedAt,
-      score,
-      totalQuestions: exerciseQuestions.length,
-      correctAnswers: correctCount,
-      answers: userAnswers,
-      chapterId
-    };
-    
-    // Add to history
-    exerciseHistory.value.push(historyEntry);
-    
-    // Reset current exercise
-    currentExercise.value = null;
-    
-    // Clear cache
-    localStorage.removeItem('current_exercise');
-    
-    return historyEntry;
-  }
-  
-  function toggleFavorite(questionId: string) {
-    if (favoriteQuestions.value.has(questionId)) {
-      favoriteQuestions.value.delete(questionId);
-    } else {
-      favoriteQuestions.value.add(questionId);
+      // 计算正确答案数量
+      for (const question of questions) {
+        const userAnswer = answers[question.id];
+        if (userAnswer === question.answer) {
+          correctAnswers++;
+        } else if (userAnswer && question.id) {
+          // 如果答错了，添加到错题本
+          try {
+            await mistakeService.addMistake(Number(question.id));
+          } catch (e) {
+            console.error('添加错题失败', e);
+          }
+        }
+      }
+      
+      const score = questions.length > 0 
+        ? Math.round((correctAnswers / questions.length) * 100)
+        : 0;
+      
+      const completedAt = new Date().toISOString();
+      
+      // 创建新的历史记录
+      const newHistory: ExerciseHistory = {
+        id: `h${Date.now()}`,
+        startedAt: startTime.toISOString(),
+        completedAt,
+        score,
+        totalQuestions: questions.length,
+        correctAnswers,
+        answers: Object.entries(answers).map(([qId, ans]) => {
+          const question = questions.find(q => q.id === qId);
+          return {
+            questionId: qId,
+            answer: ans,
+            isCorrect: question ? ans === question.answer : false,
+            timeSpent: 0, // 这里可以计算答题时间，如果有记录
+            submittedAt: completedAt
+          };
+        }),
+        chapterId: chapterId
+      };
+      
+      // 将新历史添加到历史列表
+      exerciseHistory.value.unshift(newHistory);
+      
+      // 清除当前练习
+      currentExercise.value = null;
+      localStorage.removeItem('currentExercise');
+      
+      return newHistory;
+    } catch (err: any) {
+      error.value = err.message || '提交练习失败';
+      return null;
+    } finally {
+      isLoading.value = false;
     }
-    
-    // Persist favorites
-    localStorage.setItem('favorite_questions', JSON.stringify(Array.from(favoriteQuestions.value)));
-    
-    return favoriteQuestions.value.has(questionId);
   }
   
-  // Cache mechanism
   function saveExerciseToCache() {
-    if (!currentExercise.value) return;
-    
-    localStorage.setItem('current_exercise', JSON.stringify({
-      ...currentExercise.value,
-      startTime: currentExercise.value.startTime.toISOString()
-    }));
+    if (currentExercise.value) {
+      localStorage.setItem('currentExercise', JSON.stringify({
+        ...currentExercise.value,
+        startTime: currentExercise.value.startTime.toISOString()
+      }));
+    }
   }
   
   function loadExerciseFromCache() {
-    const cachedExercise = localStorage.getItem('current_exercise');
-    
-    if (cachedExercise) {
+    const cached = localStorage.getItem('currentExercise');
+    if (cached) {
       try {
-        const parsed = JSON.parse(cachedExercise);
-        
+        const parsed = JSON.parse(cached);
         currentExercise.value = {
           ...parsed,
           startTime: new Date(parsed.startTime)
         };
-        
         return true;
       } catch (e) {
         console.error('Failed to parse cached exercise', e);
-        localStorage.removeItem('current_exercise');
+        localStorage.removeItem('currentExercise');
       }
     }
-    
     return false;
   }
   
-  // Initialize store
-  function init() {
-    // Load favorites from localStorage
-    const savedFavorites = localStorage.getItem('favorite_questions');
-    
-    if (savedFavorites) {
-      try {
-        favoriteQuestions.value = new Set(JSON.parse(savedFavorites));
-      } catch (e) {
-        console.error('Failed to load favorites', e);
-      }
-    }
-    
-    // Try to load current exercise from cache
+  async function init() {
+    // 加载缓存的练习（如果有）
     loadExerciseFromCache();
+    
+    // 获取章节和收藏的题目
+    await Promise.all([
+      fetchChapters(),
+      fetchFavoriteQuestions()
+    ]);
   }
   
-  // Call init when store is created
-  init();
-
   return {
     // State
     chapters,
     questions,
     currentExercise,
     exerciseHistory,
-    favoriteQuestions,
     isLoading,
     error,
     
@@ -391,10 +417,11 @@ export const useExerciseStore = defineStore('exercise', () => {
     fetchChapters,
     fetchQuestions,
     fetchExerciseHistory,
+    toggleFavorite,
+    fetchFavoriteQuestions,
     startExercise,
     saveAnswer,
     submitExercise,
-    toggleFavorite,
-    loadExerciseFromCache
+    init
   };
 }); 

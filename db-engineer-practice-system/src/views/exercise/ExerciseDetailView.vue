@@ -11,6 +11,7 @@ import { useUserStore } from '../../stores/userStore'
 import { QuestionType, QuestionStatus } from '../../types/exercise'
 import CodeEditor from '../../components/CodeEditor.vue'
 import { Check, Close, ArrowRight, Timer, Flag, DocumentCopy, Back } from '@element-plus/icons-vue'
+import wrongQuestionService from '../../services/mockWrongQuestionService'
 
 // 路由参数
 const route = useRoute()
@@ -30,6 +31,9 @@ const timer = ref<number | null>(null)
 const isSubmitting = ref(false)
 const showResultDialog = ref(false)
 const isExerciseCompleted = ref(false)
+// 错题本相关状态
+const showWrongQuestionTip = ref(false)
+const wrongQuestionAdded = ref(false)
 
 // 计算当前题目
 const currentQuestion = computed(() => {
@@ -159,6 +163,22 @@ const handleSqlInput = (questionId: string, sql: string) => {
   userAnswers.value[questionId] = sql
 }
 
+// 添加到错题本
+const addToWrongQuestions = async (questionId: string) => {
+  try {
+    wrongQuestionAdded.value = true
+    await wrongQuestionService.addWrongQuestion(questionId)
+    showWrongQuestionTip.value = true
+    
+    // 3秒后隐藏提示
+    setTimeout(() => {
+      showWrongQuestionTip.value = false
+    }, 3000)
+  } catch (error) {
+    console.error('添加到错题本失败', error)
+  }
+}
+
 // 提交当前题目答案
 const submitCurrentAnswer = async () => {
   if (!currentQuestion.value || !isAnswered.value) return
@@ -174,6 +194,11 @@ const submitCurrentAnswer = async () => {
     questionStatuses.value[questionId] = result.isCorrect 
       ? QuestionStatus.CORRECT 
       : QuestionStatus.INCORRECT
+    
+    // 如果答案错误，自动添加到错题本
+    if (!result.isCorrect) {
+      await addToWrongQuestions(questionId)
+    }
     
     // 显示结果提示
     ElMessage({
@@ -598,6 +623,22 @@ onBeforeUnmount(() => {
           </div>
         </div>
       </ElDialog>
+      
+      <!-- 错题添加提示 -->
+      <el-dialog v-model="showWrongQuestionTip" title="已添加到错题本" width="30%" :show-close="false">
+        <div class="wrong-question-tip">
+          <i class="el-icon-check tip-icon"></i>
+          <p>此题已自动添加到你的错题本中，可以在错题本中查看并复习！</p>
+        </div>
+        <template #footer>
+          <span class="dialog-footer">
+            <el-button @click="showWrongQuestionTip = false">关闭</el-button>
+            <el-button type="primary" @click="router.push('/wrong-questions')">
+              前往错题本
+            </el-button>
+          </span>
+        </template>
+      </el-dialog>
     </template>
   </div>
 </template>
@@ -969,6 +1010,20 @@ onBeforeUnmount(() => {
 
 .result-actions {
   margin-top: var(--spacing-lg);
+}
+
+.wrong-question-tip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.tip-icon {
+  font-size: 48px;
+  color: #67c23a;
+  margin-bottom: 15px;
 }
 
 @media (max-width: 768px) {

@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
+import userService from '../services/userService';
 
 export interface UserProfile {
   id: string;
@@ -32,16 +33,32 @@ export const useUserStore = defineStore('user', () => {
     error.value = null;
     
     try {
-      // TODO: API endpoint for login
-      // Simulate API call for now
-      await new Promise(resolve => setTimeout(resolve, 800));
+      // 使用 userService 调用真实的登录 API
+      const response = await userService.login({
+        username,
+        password
+      });
       
-      // Mock successful login
-      token.value = 'mock-token-' + Math.random().toString(36).substring(2);
-      localStorage.setItem('token', token.value);
+      // 服务层已经处理了将 token 存储到 localStorage 的逻辑
+      token.value = localStorage.getItem('token');
       
-      // Fetch user profile
-      await fetchUserProfile();
+      // 设置用户信息
+      if (response && response.user) {
+        // 将 API 返回的用户信息转换为前端需要的格式
+        user.value = {
+          id: response.user.id.toString(),
+          username: response.user.username,
+          email: response.user.email,
+          avatar: response.user.avatar || null,
+          createdAt: response.user.created_at,
+          lastLogin: response.user.last_login || new Date().toISOString(),
+          stats: {
+            totalQuestions: 0,
+            correctAnswers: 0,
+            accuracyRate: 0
+          }
+        };
+      }
       
       return true;
     } catch (err: any) {
@@ -57,11 +74,13 @@ export const useUserStore = defineStore('user', () => {
     error.value = null;
     
     try {
-      // TODO: API endpoint for registration
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // 使用 userService 调用真实的注册 API
+      await userService.register({
+        username,
+        password,
+        email
+      });
       
-      // Mock successful registration
       return true;
     } catch (err: any) {
       error.value = err.message || 'Registration failed';
@@ -72,10 +91,14 @@ export const useUserStore = defineStore('user', () => {
   }
   
   async function logout() {
-    // TODO: API endpoint for logout
-    token.value = null;
-    user.value = null;
-    localStorage.removeItem('token');
+    try {
+      // 调用真实的登出 API
+      await userService.logout();
+    } finally {
+      token.value = null;
+      user.value = null;
+      localStorage.removeItem('token');
+    }
   }
   
   async function fetchUserProfile() {
@@ -84,22 +107,21 @@ export const useUserStore = defineStore('user', () => {
     isLoading.value = true;
     
     try {
-      // TODO: API endpoint for user profile
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // 调用真实的获取用户信息 API
+      const userInfo = await userService.getUserInfo();
       
-      // Mock user data
+      // 转换格式
       user.value = {
-        id: '1',
-        username: 'testuser',
-        email: 'test@example.com',
-        avatar: null,
-        createdAt: new Date().toISOString(),
-        lastLogin: new Date().toISOString(),
+        id: userInfo.id.toString(),
+        username: userInfo.username,
+        email: userInfo.email,
+        avatar: userInfo.avatar || null,
+        createdAt: userInfo.created_at,
+        lastLogin: userInfo.last_login || new Date().toISOString(),
         stats: {
-          totalQuestions: 120,
-          correctAnswers: 85,
-          accuracyRate: 0.71
+          totalQuestions: 0,
+          correctAnswers: 0,
+          accuracyRate: 0
         }
       };
     } catch (err: any) {
@@ -115,11 +137,13 @@ export const useUserStore = defineStore('user', () => {
     isLoading.value = true;
     
     try {
-      // TODO: API endpoint for profile update
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 800));
+      // 调用真实的更新用户信息 API
+      await userService.updateUserInfo({
+        username: profileData.username,
+        email: profileData.email
+      });
       
-      // Update local user data
+      // 更新本地用户数据
       if (user.value) {
         user.value = { ...user.value, ...profileData };
       }
@@ -139,11 +163,8 @@ export const useUserStore = defineStore('user', () => {
     isLoading.value = true;
     
     try {
-      // TODO: API endpoint for avatar upload
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1200));
-      
-      // Mock avatar URL
+      // TODO: 实现真实的头像上传 API
+      // 目前暂时使用本地 URL
       const avatarUrl = URL.createObjectURL(avatarFile);
       
       if (user.value) {
@@ -158,6 +179,16 @@ export const useUserStore = defineStore('user', () => {
       isLoading.value = false;
     }
   }
+
+  // 初始化 - 如果有 token 则尝试获取用户信息
+  function init() {
+    if (token.value) {
+      fetchUserProfile();
+    }
+  }
+
+  // 调用初始化
+  init();
 
   return {
     // State
